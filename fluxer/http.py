@@ -500,6 +500,49 @@ class HTTPClient:
             payload["embeds"] = embeds
         return await self.request(route, json=payload)
 
+    async def edit_message_with_files(
+        self,
+        channel_id: int | str,
+        message_id: int | str,
+        *,
+        content: str | None = None,
+        embeds: list[dict[str, Any]] | None = None,
+        files: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """PATCH /channels/{channel_id}/messages/{message_id}"""
+        route = self._route(
+            "PATCH",
+            "/channels/{channel_id}/messages/{message_id}",
+            channel_id=channel_id,
+            message_id=message_id,
+        )
+
+        payload: dict[str, Any] = {}
+        if content is not None:
+            payload["content"] = content
+        if embeds is not None:
+            payload["embeds"] = embeds
+
+        if files:
+            form = aiohttp.FormData()
+            payload["attachments"] = [
+                {"id": i, "filename": file["filename"]} for i, file in enumerate(files)
+            ]
+            form.add_field(
+                "payload_json",
+                json_mod.dumps(payload),
+                content_type="application/json",
+            )
+            for i, file in enumerate(files):
+                form.add_field(
+                    f"files[{i}]",
+                    file["data"],
+                    filename=file["filename"],
+                )
+            return await self.request(route, data=form)
+
+        return await self.request(route, json=payload)
+
     async def delete_message(
         self, channel_id: int | str, message_id: int | str
     ) -> None:

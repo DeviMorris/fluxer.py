@@ -262,6 +262,39 @@ class Message:
         msg._cache_guild(self._guild)
         return msg
 
+    async def edit_files(
+        self,
+        content: str | None = None,
+        *,
+        embed: Any | None = None,
+        embeds: list[Any] | None = None,
+        file: File | None = None,
+        files: list[File] | None = None,
+    ) -> Message:
+        """Edit this message with files."""
+        if self._http is None:
+            raise RuntimeError("Message is not bound to an HTTP client")
+
+        combined_kwargs = process_embed_args({"embed": embed, "embeds": embeds})
+
+        file_list: list[dict[str, Any]] | None = None
+        if file is not None:
+            file_list = [file.to_dict()]
+        elif files is not None:
+            file_list = [f.to_dict() for f in files]
+
+        data = await self._http.edit_message_with_files(
+            self.channel_id,
+            self.id,
+            content=content,
+            embeds=combined_kwargs.get("embeds"),
+            files=file_list,
+        )
+        msg = Message.from_data(data, self._http)
+        msg._channel = self._channel
+        msg._cache_guild(self._guild)
+        return msg
+
     async def delete(self) -> None:
         """Delete this message."""
         if self._http is None:
